@@ -1,5 +1,5 @@
-CREATE DATABASE eswbot;
-USE eswbot;
+CREATE DATABASE eswunb;
+USE eswunb;
 
 CREATE TABLE `orientador_estagio` (
   `id` int NOT NULL AUTO_INCREMENT,
