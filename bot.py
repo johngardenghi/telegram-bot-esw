@@ -2,11 +2,14 @@ from dao import OrientadorEstagioDAO, SolicitacaoEstagioDAO
 from database.connection import DatabasePool
 from datetime import datetime
 from models import OrientadorEstagio
+from service.sigaa_update import SIGAAUpdate
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 from email.mime.text import MIMEText
 import os
 import smtplib
+
+# pip install python-telegram-bot selenium mysql-connector-python
 
 NOME = 1
 
@@ -139,6 +142,12 @@ def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text("Conversa cancelada.")
     return ConversationHandler.END
 
+# Função para atualizar dados do SIGAA
+async def atualizaSIGAA(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text("Iniciando a atualização")
+    result = SIGAAUpdate.run_update()
+    await update.message.reply_text(result)
+
 # Configuração do bot
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
@@ -150,6 +159,7 @@ if __name__ == "__main__":
         fallbacks=[CommandHandler('cancel', cancel)]
     )
     app.add_handler(orientador_estagio_handler)
+    app.add_handler(CommandHandler("atualizaSIGAA", atualizaSIGAA))
 
     print("Bot está funcionando!")
     app.run_polling()
