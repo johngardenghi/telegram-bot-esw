@@ -15,106 +15,112 @@ class SIGAAUpdate:
 
     @staticmethod
     def run_update():
-        options = Options()
-        options.add_argument("--headless")  # Adiciona o argumento para headless
-        options.add_argument("--no-sandbox")  # Evita problemas de permissões (opcional)
-
-        driver = webdriver.Firefox (options=options, service=Service("/usr/local/bin/geckodriver"))
-
-        print("Abrindo o SIGAA")
-        driver.get("https://sig.unb.br/sigaa")
-
-        # Faz o login
-        time.sleep(10)
-        print("Fazendo o login")
-        driver.find_element (By.XPATH, '//*[@id="username"]').clear()
-        driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (os.environ.get("ESWBOT_SIGAA_USER"))
-        driver.find_element (By.XPATH, '//*[@id="password"]').clear()
-        driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (os.environ.get("ESWBOT_SIGAA_PASS"))
-        driver.find_element (By.XPATH, '//*[@id="login-form"]/button').click()
-
-        # Clica no "Ciente"
-        time.sleep(10)
-        print("Clicando em Ciente")
-        driver.find_element (By.XPATH, '//*[@id="sigaa-cookie-consent"]/button').click()
-
-        # Clica no vinculo de coordenador da CESG
-        time.sleep(10)
-        print("Escolhendo o vinculo")
-        driver.find_element (By.XPATH, '//*[@id="tdTipo"]/a').click()
-
-        # Clica na Central de Estagios
-        time.sleep(10)
-        print("Acessando Central de Estagios")
-        driver.find_element (By.XPATH, '//*[@id="modulos"]/ul[1]/li[15]/a').click()
-
-        # Clica em Gerenciar Estagios
-        time.sleep(10)
-        print("Acessando Gerenciar Estagios")
-        driver.find_element (By.XPATH, '//*[@id="geral"]/ul/li[3]/ul/li[1]/a').click()
-
-        # Filtra por ATIVOS
-        time.sleep(10)
-        print("Selecionando apenas filtro de Estagios Ativos")
-        driver.find_element (By.XPATH, '//*[@id="form:checkStatus"]').click()
-        Select(driver.find_element (By.XPATH, '//*[@id="form:statusStagio"]')).select_by_value("7")
-
         result = ""
-
         try:
-            conn = mysql.connector.connect(
-                host=os.environ.get("ESWBOT_DB_HOST"),
-                user=os.environ.get("ESWBOT_DB_USER"),
-                password=os.environ.get("ESWBOT_DB_PASS"),
-                database='eswunb'
-            )
+            options = Options()
+            options.add_argument("--headless")  # Adiciona o argumento para headless
+            options.add_argument("--no-sandbox")  # Evita problemas de permissões (opcional)
 
-            if conn.is_connected():
-                cursor = conn.cursor()
-                cursor.execute("SELECT * FROM orientador_estagio")
+            driver = webdriver.Firefox (options=options, service=Service("/usr/local/bin/geckodriver"))
 
-                colunas = [desc[0] for desc in cursor.description]
-                ind_nome = colunas.index('nome')
-                ind_id = colunas.index('id')
+            print("Abrindo o SIGAA")
+            driver.get("https://sig.unb.br/sigaa")
 
-                for linha in cursor.fetchall():
-                    # Preenche o nome do orientador
-                    driver.find_element (By.XPATH, '//*[@id="form:orientador"]').clear()
-                    driver.find_element (By.XPATH, '//*[@id="form:orientador"]').send_keys(linha[ind_nome])
+            # Faz o login
+            time.sleep(10)
+            print("Fazendo o login")
+            driver.find_element (By.XPATH, '//*[@id="username"]').clear()
+            driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (os.environ.get("ESWBOT_SIGAA_USER"))
+            driver.find_element (By.XPATH, '//*[@id="password"]').clear()
+            driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (os.environ.get("ESWBOT_SIGAA_PASS"))
+            driver.find_element (By.XPATH, '//*[@id="login-form"]/button').click()
 
-                    # Clica em Buscar
-                    driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
+            # Clica no "Ciente"
+            time.sleep(10)
+            print("Clicando em Ciente")
+            driver.find_element (By.XPATH, '//*[@id="sigaa-cookie-consent"]/button').click()
 
-                    time.sleep(3)
+            # Clica no vinculo de coordenador da CESG
+            time.sleep(10)
+            print("Escolhendo o vinculo")
+            driver.find_element (By.XPATH, '//*[@id="tdTipo"]/a').click()
 
-                    # Recupera o total de Estagios Encontrados
-                    try:
-                        caption = driver.find_element (By.XPATH, '//*[@id="form"]/table[2]/caption').text
-                        total_orientandos = int(re.search(r"\((\d+)\)", caption).group(1))
-                    except NoSuchElementException:
-                        total_orientandos = 0
+            # Clica na Central de Estagios
+            time.sleep(10)
+            print("Acessando Central de Estagios")
+            driver.find_element (By.XPATH, '//*[@id="modulos"]/ul[1]/li[15]/a').click()
 
-                    print(f"{linha[ind_nome]}: {total_orientandos}")
-                    result = result + f"{linha[ind_nome]}: {total_orientandos}\n"
+            # Clica em Gerenciar Estagios
+            time.sleep(10)
+            print("Acessando Gerenciar Estagios")
+            driver.find_element (By.XPATH, '//*[@id="geral"]/ul/li[3]/ul/li[1]/a').click()
 
-                    # Atualiza o total de orientandos no banco de dados
-                    queryUpdate = "UPDATE orientador_estagio SET total_alunos_ativos = %s WHERE id = %s"
-                    valores = (total_orientandos, linha[ind_id])
-                    cursor.execute(queryUpdate, valores)
-                    conn.commit()
+            # Filtra por ATIVOS
+            time.sleep(10)
+            print("Selecionando apenas filtro de Estagios Ativos")
+            driver.find_element (By.XPATH, '//*[@id="form:checkStatus"]').click()
+            Select(driver.find_element (By.XPATH, '//*[@id="form:statusStagio"]')).select_by_value("7")
 
-                result = result + "\nOs dados no banco foram atualizados com sucesso."
+            try:
+                conn = mysql.connector.connect(
+                    host=os.environ.get("ESWBOT_DB_HOST"),
+                    user=os.environ.get("ESWBOT_DB_USER"),
+                    password=os.environ.get("ESWBOT_DB_PASS"),
+                    database='eswunb'
+                )
 
-        except Error as e:
-            result = f"Erro ao conectar ou consultar o MySQL: {e}"
-            print(result)
+                if conn.is_connected():
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM orientador_estagio")
+
+                    colunas = [desc[0] for desc in cursor.description]
+                    ind_nome = colunas.index('nome')
+                    ind_id = colunas.index('id')
+
+                    for linha in cursor.fetchall():
+                        # Preenche o nome do orientador
+                        driver.find_element (By.XPATH, '//*[@id="form:orientador"]').clear()
+                        driver.find_element (By.XPATH, '//*[@id="form:orientador"]').send_keys(linha[ind_nome])
+
+                        # Clica em Buscar
+                        driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
+
+                        time.sleep(3)
+
+                        # Recupera o total de Estagios Encontrados
+                        try:
+                            caption = driver.find_element (By.XPATH, '//*[@id="form"]/table[2]/caption').text
+                            total_orientandos = int(re.search(r"\((\d+)\)", caption).group(1))
+                        except NoSuchElementException:
+                            total_orientandos = 0
+
+                        print(f"{linha[ind_nome]}: {total_orientandos}")
+                        result = result + f"{linha[ind_nome]}: {total_orientandos}\n"
+
+                        # Atualiza o total de orientandos no banco de dados
+                        queryUpdate = "UPDATE orientador_estagio SET total_alunos_ativos = %s WHERE id = %s"
+                        valores = (total_orientandos, linha[ind_id])
+                        cursor.execute(queryUpdate, valores)
+                        conn.commit()
+
+                    result = result + "\nOs dados no banco foram atualizados com sucesso."
+
+            except Error as e:
+                result = f"Erro ao conectar ou consultar o MySQL: {e}"
+                print(result)
     
+            finally:
+                # Fechamento da conexão e do cursor
+                if conn.is_connected():
+                    cursor.close()
+                    conn.close()
+
+
+        except WebDriverException as e:
+            result = f"Erro com o Selenium: {e}"
+            print(result)
+
+
         finally:
-            # Fechamento da conexão e do cursor
-            if conn.is_connected():
-                cursor.close()
-                conn.close()   
-
             driver.quit()
-
-        return result
+            return result

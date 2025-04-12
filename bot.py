@@ -1,4 +1,4 @@
-from dao import OrientadorEstagioDAO, SolicitacaoEstagioDAO
+from dao import AdministradorEstagioDAO, OrientadorEstagioDAO, SolicitacaoEstagioDAO
 from database.connection import DatabasePool
 from datetime import datetime
 from models import OrientadorEstagio
@@ -144,9 +144,17 @@ def cancel(update: Update, context: CallbackContext) -> int:
 
 # Função para atualizar dados do SIGAA
 async def atualizaSIGAA(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("Iniciando a atualização")
-    result = SIGAAUpdate.run_update()
-    await update.message.reply_text(result)
+    conn = db_pool.get_connection()
+    administradorEstagioDAO = AdministradorEstagioDAO(conn)
+
+    if administradorEstagioDAO.checa_admin(update.message.from_user.id):
+        await update.message.reply_text("Iniciando a atualização")
+        result = SIGAAUpdate.run_update()
+        await update.message.reply_text(result)
+    else:
+        await update.message.reply_text("Você não tem privilégios para executar esta atualização.")
+
+    conn.close()
 
 # Configuração do bot
 if __name__ == "__main__":
