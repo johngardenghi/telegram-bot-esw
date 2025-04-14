@@ -1,5 +1,9 @@
-CREATE DATABASE eswbot;
-USE eswbot;
+CREATE DATABASE eswunb;
+USE eswunb;
+
+CREATE TABLE `eswunb`.`administrador_estagio` (
+  `telegram_id` VARCHAR(45) NOT NULL,
+  PRIMARY KEY (`telegram_id`));
 
 CREATE TABLE `orientador_estagio` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -10,7 +14,7 @@ CREATE TABLE `orientador_estagio` (
   `indisponivel_fim` date DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `solicitacao_estagio` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -21,7 +25,7 @@ CREATE TABLE `solicitacao_estagio` (
   PRIMARY KEY (`id`),
   KEY `orientador_estagio_idx` (`orientador`),
   CONSTRAINT `orientador_estagio` FOREIGN KEY (`orientador`) REFERENCES `orientador_estagio` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT INTO orientador_estagio VALUES
 	('1', 'Cristiane Soares Ramos', '1', '0', NULL, NULL, 'cristianesramos@unb.br'),

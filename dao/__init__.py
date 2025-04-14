@@ -1,2 +1,3 @@
+from .administrador_estagio_dao import AdministradorEstagioDAO
 from .orientador_estagio_dao import OrientadorEstagioDAO
 from .solicitacao_estagio_dao import SolicitacaoEstagioDAO
