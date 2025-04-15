@@ -55,11 +55,11 @@ def send_email(aluno, email):
             msg["Subject"] = "Indicação para orientação de estágio"
             msg["From"] = GMAIL_USER
             msg["To"] = email
+            msg["Cc"] = "engsoftware@unb.br"
             msg["Reply-To"] = "engsoftware@unb.br"
 
             # Enviar o e-mail
             server.sendmail(GMAIL_USER, email, msg.as_string())
-        return "E-mail enviado com sucesso!"
     except Exception as e:
         return f"Erro ao enviar e-mail: {e}"
 
@@ -67,46 +67,63 @@ async def inicia_conversa(update:Update, context: CallbackContext):
     await update.message.reply_text("Olá, este canal é exclusivo para indicação de professor(a) orientador(a) para estágio do curso de Engenharia de Software da FCTE")
 
     conn = db_pool.get_connection()
+    context.user_data["conn"] = conn
 
     solicitacaoEstagioDAO = SolicitacaoEstagioDAO(conn)
     orientadorEstagioDAO = OrientadorEstagioDAO(conn)
+    administradorEstagioDAO = AdministradorEstagioDAO(conn)
 
     telegram_id = update.message.from_user.id
-    
-    # Verifica se já há uma orientação de estágio indicada para o usuário que está chamando
-    solicitacaoEstagio = solicitacaoEstagioDAO.verifica_solicitacao_ativa(telegram_id)
+    is_admin = administradorEstagioDAO.checa_admin(update.message.from_user.id)
 
-    # Se já houver uma solicitação de orientador pelo usuário em questão, apenas recupera o orientador indicado e reencaminha as instruções
-    if solicitacaoEstagio is not None:
-        orientadorEstagio = orientadorEstagioDAO.get_orientador_by_id(solicitacaoEstagio.orientador)
-        dataSolicitacao = solicitacaoEstagio.data_hora.strftime("%d/%m/%Y às %H:%M")
-        await update.message.reply_text(f"Você já fez uma solicitação de orientação de estágio em {dataSolicitacao}, em que te indicamos como orientador(a) o(a) Prof.(a) <b>{orientadorEstagio.nome}</b>", parse_mode="HTML")
-        await update.message.reply_text(f"""Neste momento, por favor:\n
-            1. Faça o pré-cadastro do estágio pelo SIGAA.
-            2. Encaminhe a documentação para o(a) professor(a) pelo e-mail {orientadorEstagio.email}.
-            """, parse_mode="HTML")
-        await update.message.reply_text("Por favor, só mande a documentação depois que fizer o cadastro do estágio no SIGAA. Há um manual de como fazer isso, entre outras coisas, <a href='https://deg.unb.br/images/Diretorias/DAIA/cesg/arquivos_gerais/manual_estagio_nao_obrigatorio_discentes.pdf'>aqui</a>", parse_mode="HTML")
-        await update.message.reply_text("Lembrando que a recomendação é que a documentação seja encaminhada ao professor orientador com uma antecedência de, no mínimo, 10 dias do início do estágio")
-        await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/ensino/estagio")
+    if not is_admin:
+        # Verifica se já há uma orientação de estágio indicada para o usuário que está chamando
+        solicitacaoEstagio = solicitacaoEstagioDAO.verifica_solicitacao_ativa(telegram_id)
 
-        conn.close()
-    
-    # Se não houver solicitação prévia de orientador, inicia o processo de indicacao
-    # 1. Faz confimações de autoverificação
-    # 2. Solicita o nome do aluno e indica o orientador
-    else:
-        context.user_data["conn"] = conn
+        # Se já houver uma solicitação de orientador pelo usuário em questão, apenas recupera o orientador indicado e reencaminha as instruções
+        if solicitacaoEstagio is not None:
+            orientadorEstagio = orientadorEstagioDAO.get_orientador_by_id(solicitacaoEstagio.orientador)
+            dataSolicitacao = solicitacaoEstagio.data_hora.strftime("%d/%m/%Y às %H:%M")
+            await update.message.reply_text(f"Você já fez uma solicitação de orientação de estágio em {dataSolicitacao}, em que te indicamos como orientador(a) o(a) Prof.(a) <b>{orientadorEstagio.nome}</b>", parse_mode="HTML")
+            await update.message.reply_text(f"""Neste momento, por favor:\n
+                1. Faça o pré-cadastro do estágio pelo SIGAA.
+                2. Encaminhe a documentação para o(a) professor(a) pelo e-mail {orientadorEstagio.email}.
+                """, parse_mode="HTML")
+            await update.message.reply_text("Por favor, só mande a documentação depois que fizer o cadastro do estágio no SIGAA. Há um manual de como fazer isso, entre outras coisas, <a href='https://deg.unb.br/images/Diretorias/DAIA/cesg/arquivos_gerais/manual_estagio_nao_obrigatorio_discentes.pdf'>aqui</a>", parse_mode="HTML")
+            await update.message.reply_text("Lembrando que a recomendação é que a documentação seja encaminhada ao professor orientador com uma antecedência de, no mínimo, 10 dias do início do estágio")
+            await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/ensino/estagio")
 
-        keyboard = [
-            [InlineKeyboardButton("Sim", callback_data="possui_TCE"),
-             InlineKeyboardButton("Não", callback_data="nao_possui_TCE")],
-        ]
+            conn.close()
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("Você já possui um Termo de Compromisso de Estágio?", reply_markup=reply_markup)
-
-        return VERF
+            return ConversationHandler.END
         
+        # Se não houver solicitação prévia de orientador, inicia o processo de indicacao
+        # 1. Faz confimações de autoverificação
+        # 2. Solicita o nome do aluno e indica o orientador
+        else:
+            keyboard = [
+                [InlineKeyboardButton("Sim", callback_data="possui_TCE"),
+                InlineKeyboardButton("Não", callback_data="nao_possui_TCE")],
+            ]
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text("Você já possui um Termo de Compromisso de Estágio?", reply_markup=reply_markup)
+
+            return VERF
+    else:
+        orientadorEstagioDAO = OrientadorEstagioDAO(conn)
+        orientadorEstagio = orientadorEstagioDAO.seleciona_orientadores_disponiveis()
+
+        # Se não houver orientador disponível, apenas notifica e encerra
+        if orientadorEstagio is None:
+            await update.message.reply_text("Infelizmente, não há orientadores disponíveis no momento. Por favor, procure a coordenação do curso pelo e-mail engsoftware@unb.br ou procure a secretaria da FCTE.")
+        
+        # Se houver orientador disponível, solicita o nome (função get_nome), salva a solicitação e encaminha orientações
+        else:
+            context.user_data["orientador"] = orientadorEstagio
+            await update.message.reply_text("Por favor, qual o seu nome?")
+            return NOME
+
 async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()  # Confirma que a ação foi processada
@@ -183,8 +200,7 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
     conn.close()
 
     # Encaminha o e-mail ao professor orientador, notificando-o da indicação
-    # print(send_email(context.user_data['nome'], orientadorEstagio.email))
-    # print(send_email(context.user_data['nome'], "john.gardenghi@unb.br"))
+    print(send_email(context.user_data['nome'], orientadorEstagio.email))    
     
     return ConversationHandler.END
 
