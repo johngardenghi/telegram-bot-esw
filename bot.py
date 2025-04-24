@@ -232,12 +232,14 @@ if __name__ == "__main__":
 
     # Configura comandos e mensagens
     orientador_estagio_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, inicia_conversa)],
+        entry_points=[
+            CommandHandler('start', inicia_conversa),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, inicia_conversa)
+        ],
         states={VERF: [CallbackQueryHandler(verificar_estagio)],
                 NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, encaminhar_instrucoes)]},
         fallbacks=[CommandHandler('cancel', cancel)]
     )
-    app.add_handler(CommandHandler('start', inicia_conversa))
     app.add_handler(orientador_estagio_handler)
     app.add_handler(CommandHandler("atualizaSIGAA", atualizaSIGAA))
 
