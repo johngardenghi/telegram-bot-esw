@@ -117,6 +117,10 @@ async def inicia_conversa(update:Update, context: CallbackContext):
         # Se não houver orientador disponível, apenas notifica e encerra
         if orientadorEstagio is None:
             await update.message.reply_text("Infelizmente, não há orientadores disponíveis no momento. Por favor, procure a coordenação do curso pelo e-mail engsoftware@unb.br ou procure a secretaria da FCTE.")
+
+            conn.close()
+
+            return ConversationHandler.END
         
         # Se houver orientador disponível, solicita o nome (função get_nome), salva a solicitação e encaminha orientações
         else:
@@ -127,6 +131,8 @@ async def inicia_conversa(update:Update, context: CallbackContext):
 async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()  # Confirma que a ação foi processada
+
+    conn = context.user_data["conn"]
     
     if query.data == "possui_TCE":
         reply_markup = InlineKeyboardMarkup([[
@@ -136,6 +142,7 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "nao_possui_TCE":
         await query.edit_message_text("Então, antes providencie um Termo de Compromisso de Estágio. Se a empresa não possui um modelo, você pode encontrar um modelo em https://deg.unb.br/documentos-e-modelos. Preencha o documento e solicite a assinatura de todas as partes antes de solicitar a da UnB. Lembre-se que a data de início do estágio deve ser futura e recomendamos que o documento seja encaminhado para assinatura do(a) professor(a) orientador(a) com antecedência de 10 dias do início do estágio. Quando tiver o documento, me chame novamente que eu indico o(a) professor(a) orientador(a).")
+        conn.close()
         return ConversationHandler.END
     
     elif query.data == "inicio_futuro":
@@ -146,6 +153,7 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "nao_inicio_futuro":
         await query.edit_message_text("Então, por favor, solicite à empresa que refaça o Termo de Compromisso de Estágio para o seu estágio iniciar numa data futura. Nós recomendamos que o documento seja encaminhado para assinatura do(a) professor(a) orientador(a) com 10 dias de antecedência do início do estágio. Quando tiver a nova versão do TCE com data de início futura, pode me chamar novamente que eu indico o(a) professor(a) orientador(a).")
+        conn.close()
         return ConversationHandler.END
     
     elif query.data == "horario_adequado":
@@ -156,6 +164,7 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "nao_horario_adequado":
         await query.edit_message_text("Então, por favor, solicite à empresa que adeque seus horários no Termo de Compromisso de Estágio. Estágio em regime remoto pode ajudar a adequar sua carga horária e isso precisa constar explicitamente no termo. Quando tiver a nova versão do TCE, pode me chamar novamente que eu indico o(a) professor(a) orientador(a).")
+        conn.close()
         return ConversationHandler.END
 
     elif query.data == "tce_assinado":
@@ -175,6 +184,7 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "tce_nao_assinado":
         await query.edit_message_text("Então, por favor, solicite que os responsáveis assinem antes de encaminhar o TCE para assinatura do(a) professor(a) orientador(a). Quando tiver o documento assinado, pode me chamar novamente que eu indico o(a) professor(a) orientador(a).")
+        conn.close()
         return ConversationHandler.END
 
 async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int:

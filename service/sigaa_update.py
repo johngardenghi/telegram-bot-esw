@@ -2,7 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 import os
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
@@ -115,12 +115,13 @@ class SIGAAUpdate:
                     cursor.close()
                     conn.close()
 
+                driver.quit()
 
-        except WebDriverException as e:
-            result = f"Erro com o Selenium: {e}"
+
+        except Exception as e:
+            result = f"Houve um erro na atualização do SIGAA: {e}"
             print(result)
 
 
         finally:
-            driver.quit()
             return result
