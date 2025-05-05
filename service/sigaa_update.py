@@ -14,13 +14,15 @@ import time
 class SIGAAUpdate:
 
     @staticmethod
-    def run_update():
+    async def run_update(db_pool):
+        print("Comecando a rotina de atualizacao")
         result = ""
         try:
             options = Options()
             options.add_argument("--headless")  # Adiciona o argumento para headless
             options.add_argument("--no-sandbox")  # Evita problemas de permissões (opcional)
 
+            print("Abrindo o driver do Firefox")
             driver = webdriver.Firefox (options=options, service=Service("/usr/local/bin/geckodriver"))
 
             print("Abrindo o SIGAA")
@@ -62,16 +64,17 @@ class SIGAAUpdate:
             Select(driver.find_element (By.XPATH, '//*[@id="form:statusStagio"]')).select_by_value("7")
 
             try:
-                conn = mysql.connector.connect(
-                    host=os.environ.get("ESWBOT_DB_HOST"),
-                    user=os.environ.get("ESWBOT_DB_USER"),
-                    password=os.environ.get("ESWBOT_DB_PASS"),
-                    database='eswunb'
-                )
+                # conn = mysql.connector.connect(
+                #     host=os.environ.get("ESWBOT_DB_HOST"),
+                #     user=os.environ.get("ESWBOT_DB_USER"),
+                #     password=os.environ.get("ESWBOT_DB_PASS"),
+                #     database='eswunb'
+                # )
+                conn = db_pool.get_connection()
 
                 if conn.is_connected():
                     cursor = conn.cursor()
-                    cursor.execute("SELECT * FROM orientador_estagio")
+                    cursor.execute("SELECT * FROM orientador_estagio ORDER BY nome")
 
                     colunas = [desc[0] for desc in cursor.description]
                     ind_nome = colunas.index('nome')
@@ -85,7 +88,7 @@ class SIGAAUpdate:
                         # Clica em Buscar
                         driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
 
-                        time.sleep(3)
+                        time.sleep(5)
 
                         # Recupera o total de Estagios Encontrados
                         try:

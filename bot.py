@@ -67,7 +67,6 @@ async def inicia_conversa(update:Update, context: CallbackContext):
     await update.message.reply_text("Olá, este canal é exclusivo para indicação de professor(a) orientador(a) para estágio do curso de Engenharia de Software da FCTE")
 
     conn = db_pool.get_connection()
-    context.user_data["conn"] = conn
 
     solicitacaoEstagioDAO = SolicitacaoEstagioDAO(conn)
     orientadorEstagioDAO = OrientadorEstagioDAO(conn)
@@ -94,7 +93,6 @@ async def inicia_conversa(update:Update, context: CallbackContext):
             await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/ensino/estagio")
 
             conn.close()
-
             return ConversationHandler.END
         
         # Se não houver solicitação prévia de orientador, inicia o processo de indicacao
@@ -109,6 +107,7 @@ async def inicia_conversa(update:Update, context: CallbackContext):
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text("Você já possui um Termo de Compromisso de Estágio?", reply_markup=reply_markup)
 
+            conn.close()
             return VERF
     else:
         orientadorEstagioDAO = OrientadorEstagioDAO(conn)
@@ -119,21 +118,20 @@ async def inicia_conversa(update:Update, context: CallbackContext):
             await update.message.reply_text("Infelizmente, não há orientadores disponíveis no momento. Por favor, procure a coordenação do curso pelo e-mail engsoftware@unb.br ou procure a secretaria da FCTE.")
 
             conn.close()
-
             return ConversationHandler.END
         
         # Se houver orientador disponível, solicita o nome (função get_nome), salva a solicitação e encaminha orientações
         else:
             context.user_data["orientador"] = orientadorEstagio
             await update.message.reply_text("Por favor, qual o seu nome?")
+
+            conn.close()
             return NOME
 
 async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()  # Confirma que a ação foi processada
 
-    conn = context.user_data["conn"]
-    
     if query.data == "possui_TCE":
         reply_markup = InlineKeyboardMarkup([[
             InlineKeyboardButton("Sim", callback_data="inicio_futuro"),
@@ -142,7 +140,6 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "nao_possui_TCE":
         await query.edit_message_text("Então, antes providencie um Termo de Compromisso de Estágio. Se a empresa não possui um modelo, você pode encontrar um modelo em https://deg.unb.br/documentos-e-modelos. Preencha o documento e solicite a assinatura de todas as partes antes de solicitar a da UnB. Lembre-se que a data de início do estágio deve ser futura e recomendamos que o documento seja encaminhado para assinatura do(a) professor(a) orientador(a) com antecedência de 10 dias do início do estágio. Quando tiver o documento, me chame novamente que eu indico o(a) professor(a) orientador(a).")
-        conn.close()
         return ConversationHandler.END
     
     elif query.data == "inicio_futuro":
@@ -153,7 +150,6 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "nao_inicio_futuro":
         await query.edit_message_text("Então, por favor, solicite à empresa que refaça o Termo de Compromisso de Estágio para o seu estágio iniciar numa data futura. Nós recomendamos que o documento seja encaminhado para assinatura do(a) professor(a) orientador(a) com 10 dias de antecedência do início do estágio. Quando tiver a nova versão do TCE com data de início futura, pode me chamar novamente que eu indico o(a) professor(a) orientador(a).")
-        conn.close()
         return ConversationHandler.END
     
     elif query.data == "horario_adequado":
@@ -164,13 +160,13 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "nao_horario_adequado":
         await query.edit_message_text("Então, por favor, solicite à empresa que adeque seus horários no Termo de Compromisso de Estágio. Estágio em regime remoto pode ajudar a adequar sua carga horária e isso precisa constar explicitamente no termo. Quando tiver a nova versão do TCE, pode me chamar novamente que eu indico o(a) professor(a) orientador(a).")
-        conn.close()
         return ConversationHandler.END
 
     elif query.data == "tce_assinado":
-        conn = context.user_data["conn"]
+        conn = db_pool.get_connection()
         orientadorEstagioDAO = OrientadorEstagioDAO(conn)
         orientadorEstagio = orientadorEstagioDAO.seleciona_orientadores_disponiveis()
+        conn.close()
 
         # Se não houver orientador disponível, apenas notifica e encerra
         if orientadorEstagio is None:
@@ -184,7 +180,6 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
     
     elif query.data == "tce_nao_assinado":
         await query.edit_message_text("Então, por favor, solicite que os responsáveis assinem antes de encaminhar o TCE para assinatura do(a) professor(a) orientador(a). Quando tiver o documento assinado, pode me chamar novamente que eu indico o(a) professor(a) orientador(a).")
-        conn.close()
         return ConversationHandler.END
 
 async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int:
@@ -192,7 +187,6 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
     context.user_data['nome'] = update.message.text
     telegram_id = update.message.from_user.id
     orientadorEstagio = context.user_data["orientador"]
-    conn = context.user_data["conn"]
     
     # Encaminha o nome do professor orientador, bem como instruções dos próximos passos
     await update.message.reply_text(f"Você pode indicar como orientador(a) o(a) Prof.(a) <b>{orientadorEstagio.nome}</b>", parse_mode="HTML")
@@ -205,6 +199,7 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
     await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/ensino/estagio")
 
     # Registra a solicitação de orientação
+    conn = db_pool.get_connection()
     solicitacaoEstagioDAO = SolicitacaoEstagioDAO(conn)
     solicitacaoEstagioDAO.insere_solicitacao(orientadorEstagio.id, context.user_data['nome'], telegram_id)
     conn.close()
@@ -216,9 +211,6 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
 
 # Função para lidar com cancelamento
 def cancel(update: Update, context: CallbackContext) -> int:
-    if 'conn' in context.user_data:
-        context.user_data["conn"].close()
-    
     update.message.reply_text("Conversa cancelada.")
     return ConversationHandler.END
 
@@ -226,15 +218,16 @@ def cancel(update: Update, context: CallbackContext) -> int:
 async def atualizaSIGAA(update: Update, context: CallbackContext) -> None:
     conn = db_pool.get_connection()
     administradorEstagioDAO = AdministradorEstagioDAO(conn)
+    isAdmin = administradorEstagioDAO.checa_admin(update.message.from_user.id)
+    conn.close()
 
-    if administradorEstagioDAO.checa_admin(update.message.from_user.id):
+    if isAdmin:
         await update.message.reply_text("Iniciando a atualização")
-        result = SIGAAUpdate.run_update()
+        result = await SIGAAUpdate.run_update(db_pool)
         await update.message.reply_text(result)
     else:
         await update.message.reply_text("Você não tem privilégios para executar esta atualização.")
 
-    conn.close()
 
 # Configuração do bot
 if __name__ == "__main__":
