@@ -63,6 +63,27 @@ class SIGAAUpdate:
             driver.find_element (By.XPATH, '//*[@id="form:checkStatus"]').click()
             Select(driver.find_element (By.XPATH, '//*[@id="form:statusStagio"]')).select_by_value("7")
 
+            # Filtra por ENGENHARIA DE SOFTWARE
+            time.sleep(1)
+            driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
+            Select(driver.find_element (By.XPATH, '//*[@id="form:curso"]')).select_by_value("414924")
+
+            # Clica em Buscar
+            time.sleep(1)
+            driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
+
+            time.sleep(10)
+
+            # Recupera o total de Estagios Encontrados
+            try:
+                caption = driver.find_element (By.XPATH, '//*[@id="form"]/table[2]/caption').text
+                total_ativos = int(re.search(r"\((\d+)\)", caption).group(1))
+            except NoSuchElementException:
+                total_ativos = 0
+
+            print(f"Total de alunos com estágio ativo: {total_ativos}")
+
+            total_alunos_comissao = 0
             try:
                 # conn = mysql.connector.connect(
                 #     host=os.environ.get("ESWBOT_DB_HOST"),
@@ -97,6 +118,8 @@ class SIGAAUpdate:
                         except NoSuchElementException:
                             total_orientandos = 0
 
+                        total_alunos_comissao = total_alunos_comissao + total_orientandos
+
                         print(f"{linha[ind_nome]}: {total_orientandos}")
                         result = result + f"{linha[ind_nome]}: {total_orientandos}\n"
 
@@ -106,7 +129,13 @@ class SIGAAUpdate:
                         cursor.execute(queryUpdate, valores)
                         conn.commit()
 
-                    result = result + "\nOs dados no banco foram atualizados com sucesso."
+                    porcentagem = round (total_alunos_comissao / total_ativos, 4) * 100
+                    result = result + (
+                        f"\nTotal de alunos com estágio ativo: {total_ativos}"
+                        f"\nTotal de alunos sob orientação da comissão: {total_alunos_comissao} ({porcentagem}%)"
+                        "\n\nOs dados no banco foram atualizados com sucesso."
+                    )
+                  
 
             except Error as e:
                 result = f"Erro ao conectar ou consultar o MySQL: {e}"
