@@ -55,8 +55,7 @@ def send_email(aluno, email):
             msg["Subject"] = "Indicação para orientação de estágio"
             msg["From"] = GMAIL_USER
             msg["To"] = email
-            msg["Cc"] = "engsoftware@unb.br"
-            msg["Reply-To"] = "engsoftware@unb.br"
+            msg["Reply-To"] = "software@unb.br"
 
             # Enviar o e-mail
             server.sendmail(GMAIL_USER, email, msg.as_string())
