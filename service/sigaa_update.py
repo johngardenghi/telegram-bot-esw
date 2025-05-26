@@ -7,7 +7,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
+from selenium.webdriver.support.ui import WebDriverWait
 import re
 import time
 
@@ -25,58 +27,75 @@ class SIGAAUpdate:
             print("Abrindo o driver do Firefox")
             driver = webdriver.Firefox (options=options, service=Service("/usr/local/bin/geckodriver"))
 
+            wait = WebDriverWait(driver, 10)
+
             print("Abrindo o SIGAA")
             driver.get("https://sig.unb.br/sigaa")
 
-            # Faz o login
-            time.sleep(10)
-            print("Fazendo o login")
-            driver.find_element (By.XPATH, '//*[@id="username"]').clear()
-            driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (os.environ.get("ESWBOT_SIGAA_USER"))
-            driver.find_element (By.XPATH, '//*[@id="password"]').clear()
-            driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (os.environ.get("ESWBOT_SIGAA_PASS"))
-            driver.find_element (By.XPATH, '//*[@id="login-form"]/button').click()
+            waitSair = WebDriverWait(driver, 2)
+            while True:
+                # Faz o login
+                wait.until(EC.presence_of_element_located((By.ID, "username")))
+                print("Fazendo o login")
+                driver.find_element (By.XPATH, '//*[@id="username"]').clear()
+                driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (os.environ.get("ESWBOT_SIGAA_USER"))
+                driver.find_element (By.XPATH, '//*[@id="password"]').clear()
+                driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (os.environ.get("ESWBOT_SIGAA_PASS"))
+                driver.find_element (By.XPATH, '//*[@id="login-form"]/button').click()
+
+                # Verifica se deu o erro de bloqueio da conta
+                try:
+                    waitSair.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div[2]/center/a')))
+                    driver.find_element(By.XPATH, '/html/body/div[2]/div[2]/center/a').click()
+                except:
+                    break
 
             # Clica no "Ciente"
-            time.sleep(10)
             print("Clicando em Ciente")
-            driver.find_element (By.XPATH, '//*[@id="sigaa-cookie-consent"]/button').click()
+            try:
+                xpath =  '//*[@id="sigaa-cookie-consent"]/button'
+                wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+                driver.find_element (By.XPATH, xpath).click()
+            except:
+                pass
 
             # Clica no vinculo de coordenador da CESG
-            time.sleep(10)
             print("Escolhendo o vinculo")
-            driver.find_element (By.XPATH, '//*[@id="tdTipo"]/a').click()
+            xpath = '//*[@id="tdTipo"]/a'
+            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.find_element (By.XPATH, xpath).click()
 
             # Clica na Central de Estagios
-            time.sleep(10)
             print("Acessando Central de Estagios")
-            driver.find_element (By.XPATH, '//*[@id="modulos"]/ul[1]/li[15]/a').click()
+            xpath = '//*[@id="modulos"]/ul[1]/li[15]/a'
+            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.find_element (By.XPATH, xpath).click()
 
             # Clica em Gerenciar Estagios
-            time.sleep(10)
             print("Acessando Gerenciar Estagios")
-            driver.find_element (By.XPATH, '//*[@id="geral"]/ul/li[3]/ul/li[1]/a').click()
+            xpath = '//*[@id="geral"]/ul/li[3]/ul/li[1]/a'
+            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.find_element (By.XPATH, xpath).click()
 
             # Filtra por ATIVOS
-            time.sleep(10)
             print("Selecionando apenas filtro de Estagios Ativos")
-            driver.find_element (By.XPATH, '//*[@id="form:checkStatus"]').click()
+            xpath = '//*[@id="form:checkStatus"]'
+            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.find_element (By.XPATH, xpath).click()
             Select(driver.find_element (By.XPATH, '//*[@id="form:statusStagio"]')).select_by_value("7")
 
             # Filtra por ENGENHARIA DE SOFTWARE
-            time.sleep(1)
             driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
             Select(driver.find_element (By.XPATH, '//*[@id="form:curso"]')).select_by_value("414924")
 
             # Clica em Buscar
-            time.sleep(1)
             driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
-
-            time.sleep(10)
 
             # Recupera o total de Estagios Encontrados
             try:
-                caption = driver.find_element (By.XPATH, '//*[@id="form"]/table[2]/caption').text
+                xpath = '//*[@id="form"]/table[2]/caption'
+                wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+                caption = driver.find_element (By.XPATH, xpath).text
                 total_ativos = int(re.search(r"\((\d+)\)", caption).group(1))
             except NoSuchElementException:
                 total_ativos = 0
