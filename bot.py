@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 import os
 import smtplib
 
-VERF, NOME = range(2)
+VERF, NOME, EMAIL, TELEFONE = range(4)
 
 # Configurações gerais
 SMTP_SERVER = "smtp.gmail.com"
@@ -37,11 +37,20 @@ db_pool = DatabasePool(db_config)
 filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
 
 # Função para enviar e-mail
-def send_email(aluno, email):
+def send_email(nome_aluno, email_aluno, telefone_aluno, nome_professor, email_professor, sexo_professor):
+    if sexo_professor == "M":
+        saudacaoProfessor = f"Prezado Prof. {nome_professor}"
+        orientadora = ""
+    else:
+        saudacaoProfessor = f"Prezada Profa. {nome_professor}"
+        orientadora = "a"
+
     body = f"""
     <html><body>
-    <p>Prezado(a) professor(a),<br><br>
-    O(A) estudante <b>{aluno}</b> acabou de receber indicação do seu nome como orientador(a) de estágio via bot do Telegram.<br><br>
+    <p>{saudacaoProfessor},<br><br>
+    O(A) estudante <b>{nome_aluno}</b> acabou de receber indicação do seu nome como professor{orientadora} orientador{orientadora} de estágio via bot do Telegram.<br>
+    <b>E-mail do aluno</b>: {email_aluno}<br>
+    <b>Telefone do aluno</b>: {telefone_aluno}<br><br>
     Em breve, ele(a) deve te enviar a documentação por e-mail.<br><br>
     Atenciosamente,<br><br>Comissão de Estágios de ESW.
     </p></body></html>
@@ -54,11 +63,16 @@ def send_email(aluno, email):
             msg = MIMEText(body, "html")
             msg["Subject"] = "Indicação para orientação de estágio"
             msg["From"] = GMAIL_USER
-            msg["To"] = email
+            msg["To"] = email_professor
+            msg["Cc"] = "software@unb.br"
             msg["Reply-To"] = "software@unb.br"
 
             # Enviar o e-mail
-            server.sendmail(GMAIL_USER, email, msg.as_string())
+            destinatarios = [email_professor, "software@unb.br"]
+            server.sendmail(GMAIL_USER, destinatarios, msg.as_string())
+
+        return f"E-mail enviado com sucesso para {email_professor}."
+            
     except Exception as e:
         return f"Erro ao enviar e-mail: {e}"
 
@@ -82,13 +96,25 @@ async def inicia_conversa(update:Update, context: CallbackContext):
         if solicitacaoEstagio is not None:
             orientadorEstagio = orientadorEstagioDAO.get_orientador_by_id(solicitacaoEstagio.orientador)
             dataSolicitacao = solicitacaoEstagio.data_hora.strftime("%d/%m/%Y às %H:%M")
-            await update.message.reply_text(f"Você já fez uma solicitação de orientação de estágio em {dataSolicitacao}, em que te indicamos como orientador(a) o(a) Prof.(a) <b>{orientadorEstagio.nome}</b>", parse_mode="HTML")
+
+            contatoOrientador = orientadorEstagio.email
+            if orientadorEstagio.contato is not None:
+                contatoOrientador = contatoOrientador + f" ou pelo {orientadorEstagio.contato}"
+
+            if orientadorEstagio.sexo == "M":
+                indicacao = f"em que te indicamos como orientador o Prof. <b>{orientadorEstagio.nome}</b>"
+                indicacao2 = f"Encaminhe a documentação para o professor pelo e-mail {contatoOrientador}"
+            else:
+                indicacao = f"em que te indicamos como orientadora a Profa. <b>{orientadorEstagio.nome}</b>"
+                indicacao2 = f"Encaminhe a documentação para a professora pelo e-mail {contatoOrientador}"
+
+            await update.message.reply_text(f"Você já fez uma solicitação de orientação de estágio em {dataSolicitacao}, {indicacao}", parse_mode="HTML")
             await update.message.reply_text(f"""Neste momento, por favor:\n
                 1. Faça o pré-cadastro do estágio pelo SIGAA.
-                2. Encaminhe a documentação para o(a) professor(a) pelo e-mail {orientadorEstagio.email}.
+                2. {indicacao2}.
                 """, parse_mode="HTML")
             await update.message.reply_text("Por favor, só mande a documentação depois que fizer o cadastro do estágio no SIGAA. Há um manual de como fazer isso, entre outras coisas, <a href='https://deg.unb.br/images/Diretorias/DAIA/cesg/arquivos_gerais/manual_estagio_nao_obrigatorio_discentes.pdf'>aqui</a>", parse_mode="HTML")
-            await update.message.reply_text("Lembrando que a recomendação é que a documentação seja encaminhada ao professor orientador com uma antecedência de, no mínimo, 10 dias do início do estágio")
+            await update.message.reply_text("Lembrando que a recomendação é que a documentação seja encaminhada com uma antecedência de, no mínimo, 10 dias do início do estágio")
             await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/ensino/estagio")
 
             conn.close()
@@ -181,17 +207,40 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
         await query.edit_message_text("Então, por favor, solicite que os responsáveis assinem antes de encaminhar o TCE para assinatura do(a) professor(a) orientador(a). Quando tiver o documento assinado, pode me chamar novamente que eu indico o(a) professor(a) orientador(a).")
         return ConversationHandler.END
 
-async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int:
+async def coleta_nome(update: Update, context: CallbackContext) -> int:
     # Armazena o nome do aluno
     context.user_data['nome'] = update.message.text
+    await update.message.reply_text("Qual o seu e-mail?")
+    return EMAIL
+
+async def coleta_email(update: Update, context: CallbackContext) -> int:
+    # Armazena o nome do aluno
+    context.user_data['email'] = update.message.text
+    await update.message.reply_text("Qual o seu telefone?")
+    return TELEFONE
+
+async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int:
+    # Armazena o telefone do aluno
+    context.user_data['telefone'] = update.message.text
     telegram_id = update.message.from_user.id
     orientadorEstagio = context.user_data["orientador"]
     
+    contatoOrientador = orientadorEstagio.email
+    if orientadorEstagio.contato is not None:
+        contatoOrientador = contatoOrientador + f" ou pelo {orientadorEstagio.contato}"
+    
     # Encaminha o nome do professor orientador, bem como instruções dos próximos passos
-    await update.message.reply_text(f"Você pode indicar como orientador(a) o(a) Prof.(a) <b>{orientadorEstagio.nome}</b>", parse_mode="HTML")
+    if orientadorEstagio.sexo == "M":
+        indicacao = f"Você pode indicar como orientador o Prof. <b>{orientadorEstagio.nome}</b>"
+        indicacao2 = f"Encaminhe a documentação para o professor pelo e-mail {contatoOrientador}"
+    else:
+        indicacao = f"Você pode indicar como orientadora a Profa. <b>{orientadorEstagio.nome}</b>"
+        indicacao2 = f"Encaminhe a documentação para a professora pelo e-mail {contatoOrientador}"
+        
+    await update.message.reply_text(indicacao, parse_mode="HTML")
     await update.message.reply_text(f"""Neste momento, por favor:\n
         1. Faça o pré-cadastro do estágio pelo SIGAA.
-        2. Encaminhe a documentação para o(a) professor(a) pelo e-mail {orientadorEstagio.email}.
+        2. {indicacao2}.
         """, parse_mode="HTML")
     await update.message.reply_text("Por favor, só mande a documentação depois que fizer o cadastro do estágio no SIGAA. Há um manual de como fazer isso, entre outras coisas, <a href='https://deg.unb.br/images/Diretorias/DAIA/cesg/arquivos_gerais/manual_estagio_nao_obrigatorio_discentes.pdf'>aqui</a>", parse_mode="HTML")
     await update.message.reply_text("Lembrando que a recomendação é que a documentação seja encaminhada ao professor orientador com uma antecedência de, no mínimo, 10 dias do início do estágio")
@@ -200,11 +249,11 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
     # Registra a solicitação de orientação
     conn = db_pool.get_connection()
     solicitacaoEstagioDAO = SolicitacaoEstagioDAO(conn)
-    solicitacaoEstagioDAO.insere_solicitacao(orientadorEstagio.id, context.user_data['nome'], telegram_id)
+    solicitacaoEstagioDAO.insere_solicitacao(orientadorEstagio.id, context.user_data['nome'], context.user_data['email'], context.user_data['telefone'], telegram_id)
     conn.close()
 
     # Encaminha o e-mail ao professor orientador, notificando-o da indicação
-    print(send_email(context.user_data['nome'], orientadorEstagio.email))    
+    print(send_email(context.user_data['nome'], context.user_data['email'], context.user_data['telefone'], orientadorEstagio.nome, orientadorEstagio.email, orientadorEstagio.sexo))
     
     return ConversationHandler.END
 
@@ -239,7 +288,9 @@ if __name__ == "__main__":
             MessageHandler(filters.TEXT & ~filters.COMMAND, inicia_conversa)
         ],
         states={VERF: [CallbackQueryHandler(verificar_estagio)],
-                NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, encaminhar_instrucoes)]},
+                NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, coleta_nome)],
+                EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, coleta_email)],
+                TELEFONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, encaminhar_instrucoes)]},
         fallbacks=[CommandHandler('cancel', cancel)]
     )
     app.add_handler(orientador_estagio_handler)

@@ -1,5 +1,5 @@
 class OrientadorEstagio:
-    def __init__(self, id=None, nome=None, disponivel=None, total_alunos_ativos=None, indisponivel_inicio=None, indisponivel_fim=None, email=None):
+    def __init__(self, id=None, nome=None, disponivel=None, total_alunos_ativos=None, indisponivel_inicio=None, indisponivel_fim=None, email=None, contato=None, sexo=None):
         self.id = id
         self.nome = nome
         self.disponivel = disponivel
@@ -7,6 +7,8 @@ class OrientadorEstagio:
         self.indisponivel_inicio = indisponivel_inicio
         self.indisponivel_fim = indisponivel_fim
         self.email = email
+        self.contato = contato
+        self.sexo = sexo
 
     @classmethod
     def from_dict(cls, data):
@@ -17,5 +19,7 @@ class OrientadorEstagio:
             total_alunos_ativos=data.get("total_alunos_ativos"),
             indisponivel_inicio=data.get("indisponivel_inicio"),
             indisponivel_fim=data.get("indisponivel_fim"),
-            email=data.get("email")
+            email=data.get("email"),
+            contato=data.get("contato"),
+            sexo=data.get("sexo")
         )
