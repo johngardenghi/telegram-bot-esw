@@ -125,6 +125,9 @@ class SIGAAUpdate:
                         driver.find_element (By.XPATH, '//*[@id="form:orientador"]').clear()
                         driver.find_element (By.XPATH, '//*[@id="form:orientador"]').send_keys(linha[ind_nome])
 
+                        # Desmarca o filtro por curso
+                        driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
+
                         # Clica em Buscar
                         driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
 
@@ -137,10 +140,26 @@ class SIGAAUpdate:
                         except NoSuchElementException:
                             total_orientandos = 0
 
-                        total_alunos_comissao = total_alunos_comissao + total_orientandos
+                        # Marca o filtro por curso
+                        driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
+                        Select(driver.find_element (By.XPATH, '//*[@id="form:curso"]')).select_by_value("414924")
 
-                        print(f"{linha[ind_nome]}: {total_orientandos}")
-                        result = result + f"{linha[ind_nome]}: {total_orientandos}\n"
+                        # Clica em Buscar
+                        driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
+
+                        time.sleep(5)
+
+                        # Recupera o total de Estagios Encontrados para ESW
+                        try:
+                            caption = driver.find_element (By.XPATH, '//*[@id="form"]/table[2]/caption').text
+                            total_orientandos_software = int(re.search(r"\((\d+)\)", caption).group(1))
+                        except NoSuchElementException:
+                            total_orientandos_software = 0
+
+                        total_alunos_comissao = total_alunos_comissao + total_orientandos_software
+
+                        print(f"{linha[ind_nome]}: {total_orientandos} ({total_orientandos_software})")
+                        result = result + f"{linha[ind_nome]}: {total_orientandos}  ({total_orientandos_software})\n"
 
                         # Atualiza o total de orientandos no banco de dados
                         queryUpdate = "UPDATE orientador_estagio SET total_alunos_ativos = %s WHERE id = %s"
