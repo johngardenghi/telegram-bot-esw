@@ -65,6 +65,11 @@ class SIGAAUpdate:
             wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             driver.find_element (By.XPATH, xpath).click()
 
+            # Clica em "Continuar"
+            # xpath = '//*[@id="j_id_jsp_933481798_1"]/div/input'
+            # wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            # driver.find_element (By.XPATH, xpath).click()
+
             # Clica na Central de Estagios
             print("Acessando Central de Estagios")
             xpath = '//*[@id="modulos"]/ul[1]/li[15]/a'
