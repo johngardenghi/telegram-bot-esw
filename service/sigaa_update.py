@@ -3,6 +3,7 @@ from mysql.connector import Error
 import os
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
@@ -28,6 +29,7 @@ class SIGAAUpdate:
             driver = webdriver.Firefox (options=options, service=Service("/usr/local/bin/geckodriver"))
 
             wait = WebDriverWait(driver, 10)
+            actions = ActionChains(driver)
 
             print("Abrindo o SIGAA")
             driver.get("https://sig.unb.br/sigaa")
@@ -59,28 +61,36 @@ class SIGAAUpdate:
             except:
                 pass
 
-            # Clica no vinculo de coordenador da CESG
+            # Clica no vinculo de supervisor acadêmico
             print("Escolhendo o vinculo")
-            xpath = '//*[@id="tdTipo"]/a'
+            xpath = '/html/body/div[2]/div[2]/form/table/tbody/tr/td/table/tbody/tr[4]/td[2]/a'
             wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             driver.find_element (By.XPATH, xpath).click()
 
             # Clica em "Continuar"
-            # xpath = '//*[@id="j_id_jsp_933481798_1"]/div/input'
-            # wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
-            # driver.find_element (By.XPATH, xpath).click()
-
-            # Clica na Central de Estagios
-            print("Acessando Central de Estagios")
-            xpath = '//*[@id="modulos"]/ul[1]/li[15]/a'
+            xpath = '//*[@id="j_id_jsp_933481798_1"]/div/input'
             wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             driver.find_element (By.XPATH, xpath).click()
 
-            # Clica em Gerenciar Estagios
-            print("Acessando Gerenciar Estagios")
-            xpath = '//*[@id="geral"]/ul/li[3]/ul/li[1]/a'
+            # Clica no Portal Coord. Graduação
+            print("Acessando Portal Coord. Graduacao")
+            xpath = '//*[@id="portais"]/ul/li[5]/a'
             wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             driver.find_element (By.XPATH, xpath).click()
+
+            # Abre o menu "Estagios"
+            print("Abrindo o menu Estagios")
+            xpath = '//*[@id="menu_coordenador_menuMatriculas_menu"]/table/tbody/tr/td[7]/span[2]'
+            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            menu = driver.find_element (By.XPATH, xpath)
+            actions.move_to_element(menu).perform()
+
+            # Clica em "Gerenciar Estagios"
+            print("Clicando em Gerenciar Estagios")
+            xpath = '//*[@id="cmSubMenuID12"]/table/tbody/tr[4]/td[2]'
+            wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
+            menu = driver.find_element (By.XPATH, xpath)
+            actions.move_to_element(menu).click().perform()
 
             # Filtra por ATIVOS
             print("Selecionando apenas filtro de Estagios Ativos")
@@ -90,8 +100,8 @@ class SIGAAUpdate:
             Select(driver.find_element (By.XPATH, '//*[@id="form:statusStagio"]')).select_by_value("7")
 
             # Filtra por ENGENHARIA DE SOFTWARE
-            driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
-            Select(driver.find_element (By.XPATH, '//*[@id="form:curso"]')).select_by_value("414924")
+            # driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
+            # Select(driver.find_element (By.XPATH, '//*[@id="form:curso"]')).select_by_value("414924")
 
             # Clica em Buscar
             driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
@@ -130,24 +140,24 @@ class SIGAAUpdate:
                         driver.find_element (By.XPATH, '//*[@id="form:orientador"]').clear()
                         driver.find_element (By.XPATH, '//*[@id="form:orientador"]').send_keys(linha[ind_nome])
 
-                        # Desmarca o filtro por curso
-                        driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
+                        # # Desmarca o filtro por curso
+                        # driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
 
-                        # Clica em Buscar
-                        driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
+                        # # Clica em Buscar
+                        # driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
 
-                        time.sleep(5)
+                        # time.sleep(5)
 
-                        # Recupera o total de Estagios Encontrados
-                        try:
-                            caption = driver.find_element (By.XPATH, '//*[@id="form"]/table[2]/caption').text
-                            total_orientandos = int(re.search(r"\((\d+)\)", caption).group(1))
-                        except NoSuchElementException:
-                            total_orientandos = 0
+                        # # Recupera o total de Estagios Encontrados
+                        # try:
+                        #     caption = driver.find_element (By.XPATH, '//*[@id="form"]/table[2]/caption').text
+                        #     total_orientandos = int(re.search(r"\((\d+)\)", caption).group(1))
+                        # except NoSuchElementException:
+                        #     total_orientandos = 0
 
-                        # Marca o filtro por curso
-                        driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
-                        Select(driver.find_element (By.XPATH, '//*[@id="form:curso"]')).select_by_value("414924")
+                        # # Marca o filtro por curso
+                        # driver.find_element (By.XPATH, '//*[@id="form:checkCurso"]').click()
+                        # Select(driver.find_element (By.XPATH, '//*[@id="form:curso"]')).select_by_value("414924")
 
                         # Clica em Buscar
                         driver.find_element (By.XPATH, '//*[@id="form:btBuscar"]').click()
@@ -163,12 +173,12 @@ class SIGAAUpdate:
 
                         total_alunos_comissao = total_alunos_comissao + total_orientandos_software
 
-                        print(f"{linha[ind_nome]}: {total_orientandos} ({total_orientandos_software})")
-                        result = result + f"{linha[ind_nome]}: {total_orientandos}  ({total_orientandos_software})\n"
+                        print(f"{linha[ind_nome]}: {total_orientandos_software}")
+                        result = result + f"{linha[ind_nome]}: {total_orientandos_software}\n"
 
                         # Atualiza o total de orientandos no banco de dados
                         queryUpdate = "UPDATE orientador_estagio SET total_alunos_ativos = %s WHERE id = %s"
-                        valores = (total_orientandos, linha[ind_id])
+                        valores = (total_orientandos_software, linha[ind_id])
                         cursor.execute(queryUpdate, valores)
                         conn.commit()
 
