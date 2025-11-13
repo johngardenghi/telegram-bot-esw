@@ -16,7 +16,7 @@ class OrientadorEstagioDAO:
                 indisponivel_fim IS NULL
             ) AS orientadores_ativos
             WHERE total_alunos_ativos <= (
-                SELECT MIN(total_alunos_ativos) + 3 FROM orientador_estagio
+                SELECT MIN(total_alunos_ativos) + 15 FROM orientador_estagio
                 WHERE CURDATE() NOT BETWEEN indisponivel_inicio AND indisponivel_fim OR
                 indisponivel_inicio IS NULL OR
                 indisponivel_fim IS NULL
