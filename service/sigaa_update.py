@@ -129,7 +129,7 @@ class SIGAAUpdate:
 
                 if conn.is_connected():
                     cursor = conn.cursor()
-                    cursor.execute("SELECT * FROM orientador_estagio ORDER BY nome")
+                    cursor.execute("SELECT * FROM orientador_estagio WHERE ativo = 1 ORDER BY nome")
 
                     colunas = [desc[0] for desc in cursor.description]
                     ind_nome = colunas.index('nome')
