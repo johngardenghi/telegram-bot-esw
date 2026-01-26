@@ -67,10 +67,10 @@ class SIGAAUpdate:
             wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             driver.find_element (By.XPATH, xpath).click()
 
-            # Clica em "Continuar"
-            xpath = '//*[@id="j_id_jsp_933481798_1"]/div/input'
-            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
-            driver.find_element (By.XPATH, xpath).click()
+            # Clica no primeiro botão "Continuar"
+            # xpath = '//*[@id="j_id_jsp_933481798_1"]/div/input'
+            # wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            # driver.find_element (By.XPATH, xpath).click()
 
             # Clica no Portal Coord. Graduação
             print("Acessando Portal Coord. Graduacao")

@@ -115,7 +115,7 @@ async def inicia_conversa(update:Update, context: CallbackContext):
                 """, parse_mode="HTML")
             await update.message.reply_text("Por favor, só mande a documentação depois que fizer o cadastro do estágio no SIGAA. Há um manual de como fazer isso, entre outras coisas, <a href='https://deg.unb.br/wp-content/uploads/manual_estagio_nao_obrigatorio_discentes.pdf'>aqui</a>", parse_mode="HTML")
             await update.message.reply_text("Lembrando que a recomendação é que a documentação seja encaminhada com uma antecedência de, no mínimo, 10 dias do início do estágio")
-            await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/ensino/estagio")
+            await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/estagio-nao-obrigatorio/")
 
             conn.close()
             return ConversationHandler.END
@@ -244,7 +244,7 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
         """, parse_mode="HTML")
     await update.message.reply_text("Por favor, só mande a documentação depois que fizer o cadastro do estágio no SIGAA. Há um manual de como fazer isso, entre outras coisas, <a href='https://deg.unb.br/wp-content/uploads/manual_estagio_nao_obrigatorio_discentes.pdf'>aqui</a>", parse_mode="HTML")
     await update.message.reply_text("Lembrando que a recomendação é que a documentação seja encaminhada ao professor orientador com uma antecedência de, no mínimo, 10 dias do início do estágio")
-    await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/ensino/estagio")
+    await update.message.reply_text("Para mais informações sobre estágio, acesse https://software.unb.br/estagio-nao-obrigatorio/")
 
     # Registra a solicitação de orientação
     conn = db_pool.get_connection()
