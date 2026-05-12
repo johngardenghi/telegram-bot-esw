@@ -101,8 +101,8 @@ class SIGAAUpdate:
         result_abi = ""
         try:
             options = Options()
-            # options.add_argument("--headless")    # Adiciona o argumento para headless
-            # options.add_argument("--no-sandbox")  # Evita problemas de permissões (opcional)
+            options.add_argument("--headless")    # Adiciona o argumento para headless
+            options.add_argument("--no-sandbox")  # Evita problemas de permissões (opcional)
 
             print("Abrindo o driver do Firefox")
             driver = webdriver.Firefox (options=options, service=Service("/usr/local/bin/geckodriver"))
