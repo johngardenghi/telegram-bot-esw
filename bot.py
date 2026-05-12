@@ -272,7 +272,8 @@ async def atualizaSIGAA(update: Update, context: CallbackContext) -> None:
     if isAdmin:
         await update.message.reply_text("Iniciando a atualização")
         result = await SIGAAUpdate.run_update(db_pool)
-        await update.message.reply_text(result)
+        for msg in result:
+            await update.message.reply_text(msg)
     else:
         await update.message.reply_text("Você não tem privilégios para executar esta atualização.")
 
