@@ -14,3 +14,15 @@ class AdministradorEstagioDAO:
             return True
         else:
             return False
+
+    def usuarios_admin(self):
+        cursor = self.conn.cursor(dictionary=True)
+
+        try:
+            cursor.execute("SELECT telegram_id FROM administrador_estagio")
+            resultados = cursor.fetchall()
+
+            return [int(linha["telegram_id"]) for linha in resultados]
+
+        finally:
+            cursor.close()

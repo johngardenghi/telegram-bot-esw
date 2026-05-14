@@ -1,3 +1,5 @@
+import os
+
 from models.orientador_estagio import OrientadorEstagio
 
 class OrientadorEstagioDAO:
@@ -8,21 +10,11 @@ class OrientadorEstagioDAO:
         cursor = self.conn.cursor(dictionary=True)
 
         # Seleciona entre os orientadores disponíveis o próximo da fila
-        querySorteio = """
-            SELECT * FROM (
-                SELECT * FROM orientador_estagio
-                WHERE ativo = 1 AND (CURDATE() NOT BETWEEN indisponivel_inicio AND indisponivel_fim OR
-                indisponivel_inicio IS NULL OR
-                indisponivel_fim IS NULL)
-            ) AS orientadores_ativos
-            WHERE total_alunos_ativos <= (
-                SELECT MIN(total_alunos_ativos) + 3 FROM orientador_estagio
-                WHERE ativo = 1 AND (CURDATE() NOT BETWEEN indisponivel_inicio AND indisponivel_fim OR
-                indisponivel_inicio IS NULL OR
-                indisponivel_fim IS NULL)
-                ) AND disponivel = 1
-            ORDER BY RAND(UNIX_TIMESTAMP())
-            LIMIT 1;
+        querySorteio = f"""
+        SELECT * FROM orientadores_ativos
+        WHERE total_alunos_ativos <= ( SELECT MIN(total_alunos_ativos) + {os.environ.get("ESWBOT_RAIO")} FROM orientadores_ativos ) AND disponivel = 1
+        ORDER BY RAND(UNIX_TIMESTAMP())
+        LIMIT 1;
         """
         cursor.execute(querySorteio)
         result = cursor.fetchone()

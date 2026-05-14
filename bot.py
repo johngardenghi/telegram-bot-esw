@@ -1,8 +1,10 @@
 from dao import AdministradorEstagioDAO, OrientadorEstagioDAO, SolicitacaoEstagioDAO
 from database.connection import DatabasePool
+from service.administracao import Administracao
+from service.orientadores import Orientadores
 from service.sigaa_update import SIGAAUpdate
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler, MessageHandler, filters
+from telegram import BotCommand, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Application, ApplicationBuilder, CallbackContext, ConversationHandler, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 from telegram.warnings import PTBUserWarning
 from warnings import filterwarnings
 from email.mime.text import MIMEText
@@ -140,7 +142,7 @@ async def inicia_conversa(update:Update, context: CallbackContext):
 
         # Se não houver orientador disponível, apenas notifica e encerra
         if orientadorEstagio is None:
-            await update.message.reply_text("Infelizmente, não há orientadores disponíveis no momento. Por favor, procure a coordenação do curso pelo e-mail engsoftware@unb.br ou procure a secretaria da FCTE.")
+            await update.message.reply_text("Infelizmente, não há orientadores disponíveis no momento. Por favor, procure a coordenação do curso pelo e-mail software@unb.br ou procure a secretaria da FCTE.")
 
             conn.close()
             return ConversationHandler.END
@@ -148,7 +150,7 @@ async def inicia_conversa(update:Update, context: CallbackContext):
         # Se houver orientador disponível, solicita o nome (função get_nome), salva a solicitação e encaminha orientações
         else:
             context.user_data["orientador"] = orientadorEstagio
-            await update.message.reply_text("Por favor, qual o seu nome?")
+            await update.message.reply_text("Por favor, qual o seu nome?\n\nSe desejar cancelar, envie /cancelar.")
 
             conn.close()
             return NOME
@@ -195,12 +197,12 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
 
         # Se não houver orientador disponível, apenas notifica e encerra
         if orientadorEstagio is None:
-            await query.edit_message_text("Infelizmente, não há orientadores disponíveis no momento. Por favor, procure a coordenação do curso pelo e-mail engsoftware@unb.br ou procure a secretaria da FCTE.")
+            await query.edit_message_text("Infelizmente, não há orientadores disponíveis no momento. Por favor, procure a coordenação do curso pelo e-mail software@unb.br ou procure a secretaria da FCTE.")
         
         # Se houver orientador disponível, solicita o nome (função get_nome), salva a solicitação e encaminha orientações
         else:
             context.user_data["orientador"] = orientadorEstagio
-            await query.edit_message_text("Por favor, qual o seu nome?")
+            await query.edit_message_text("Por favor, qual o seu nome?\n\nSe desejar cancelar, envie /cancelar.")
             return NOME
     
     elif query.data == "tce_nao_assinado":
@@ -210,13 +212,13 @@ async def verificar_estagio(update: Update, context: CallbackContext) -> int:
 async def coleta_nome(update: Update, context: CallbackContext) -> int:
     # Armazena o nome do aluno
     context.user_data['nome'] = update.message.text
-    await update.message.reply_text("Qual o seu e-mail?")
+    await update.message.reply_text("Qual o seu e-mail?\n\nSe desejar cancelar, envie /cancelar.")
     return EMAIL
 
 async def coleta_email(update: Update, context: CallbackContext) -> int:
     # Armazena o nome do aluno
     context.user_data['email'] = update.message.text
-    await update.message.reply_text("Qual o seu telefone?")
+    await update.message.reply_text("Qual o seu telefone?\n\nSe desejar cancelar, envie /cancelar.")
     return TELEFONE
 
 async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int:
@@ -258,18 +260,13 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
     return ConversationHandler.END
 
 # Função para lidar com cancelamento
-def cancel(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text("Conversa cancelada.")
+async def cancel(update: Update, context: CallbackContext) -> int:
+    await update.message.reply_text("Conversa cancelada.")
     return ConversationHandler.END
 
 # Função para atualizar dados do SIGAA
 async def atualizaSIGAA(update: Update, context: CallbackContext) -> None:
-    conn = db_pool.get_connection()
-    administradorEstagioDAO = AdministradorEstagioDAO(conn)
-    isAdmin = administradorEstagioDAO.checa_admin(update.message.from_user.id)
-    conn.close()
-
-    if isAdmin:
+    if Administracao.eh_admin(db_pool, update.message.from_user.id):
         await update.message.reply_text("Iniciando a atualização")
         result = await SIGAAUpdate.run_update(db_pool)
         for msg in result:
@@ -277,10 +274,61 @@ async def atualizaSIGAA(update: Update, context: CallbackContext) -> None:
     else:
         await update.message.reply_text("Você não tem privilégios para executar esta atualização.")
 
+# Função para obter a lista de orientadores disponiveis para indicacao na presente data
+async def lista_orientadores(update: Update, context: CallbackContext) -> None:
+    if Administracao.eh_admin(db_pool, update.message.from_user.id):
+        result = await Orientadores.disponiveis(db_pool)
+        for msg in result:
+            await update.message.reply_text(msg)
+    else:
+        await update.message.reply_text("Você não tem privilégios para executar esta atualização.")
+
+async def lista_orientadores_afastados(update: Update, context: CallbackContext) -> None:
+    if Administracao.eh_admin(db_pool, update.message.from_user.id):
+        result = await Orientadores.afastados(db_pool)
+        for msg in result:
+            await update.message.reply_text(msg)
+    else:
+        await update.message.reply_text("Você não tem privilégios para executar esta atualização.")
+
+async def lista_orientadores_inativos(update: Update, context: CallbackContext) -> None:
+    if Administracao.eh_admin(db_pool, update.message.from_user.id):
+        result = await Orientadores.inativos(db_pool)
+        for msg in result:
+            await update.message.reply_text(msg)
+    else:
+        await update.message.reply_text("Você não tem privilégios para executar esta atualização.")
+
+# Comandos do bot
+def comandos_publicos() -> list[BotCommand]:
+    return [
+        BotCommand("start", "Iniciar indicação de professor orientador de estágio"),
+    ]
+
+def comandos_administrador() -> list[BotCommand]:
+    return [
+        BotCommand("start", "Iniciar indicação de professor orientador de estágio"),
+        BotCommand("atualiza_alunos", "Atualizar os totais de alunos por orientador da comissão"),
+        BotCommand("orientadores_disponiveis", "Lista os orientadores que estão disponíveis para indicação na data de hoje"),
+        BotCommand("orientadores_afastados", "Lista os orientadores que estão indisponíveis para indicação na data de hoje"),
+        BotCommand("orientadores_inativos", "Lista os orientadores que não fazem mais parte da comissão"),
+    ]
+
+async def configurar_comandos(application: Application):
+    await application.bot.set_my_commands(comandos_publicos())
+
+    conn = db_pool.get_connection()
+    administradorEstagioDAO = AdministradorEstagioDAO(conn)
+
+    for telegram_id in administradorEstagioDAO.usuarios_admin():
+        await application.bot.set_my_commands(
+            comandos_administrador(),
+            scope=BotCommandScopeChat(chat_id=telegram_id),
+        )
 
 # Configuração do bot
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(configurar_comandos).build()
 
     # Configura comandos e mensagens
     orientador_estagio_handler = ConversationHandler(
@@ -292,10 +340,13 @@ if __name__ == "__main__":
                 NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, coleta_nome)],
                 EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, coleta_email)],
                 TELEFONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, encaminhar_instrucoes)]},
-        fallbacks=[CommandHandler('cancel', cancel)]
+        fallbacks=[CommandHandler('cancelar', cancel)]
     )
     app.add_handler(orientador_estagio_handler)
-    app.add_handler(CommandHandler("atualizaSIGAA", atualizaSIGAA))
+    app.add_handler(CommandHandler("atualiza_alunos", atualizaSIGAA))
+    app.add_handler(CommandHandler("orientadores_disponiveis", lista_orientadores))
+    app.add_handler(CommandHandler("orientadores_afastados", lista_orientadores_afastados))
+    app.add_handler(CommandHandler("orientadores_inativos", lista_orientadores_inativos))
 
     print("Bot está funcionando!")
     app.run_polling()
