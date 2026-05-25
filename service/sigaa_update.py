@@ -165,7 +165,10 @@ class SIGAAUpdate:
                     total_ativos_engenharias, total_comissao_engenharias = SIGAAUpdate.update (driver, wait, orientadores, link, 'engenharias')
 
                     for nome, info in orientadores.items():
-                        result = result + f'{nome}: {info["software"]} + {info["engenharias"]} = {info["software"] + info["engenharias"]}\n'
+                        if info["engenharias"] > 0:
+                            result = result + f'{nome}: {info["software"]} + {info["engenharias"]} = {info["software"] + info["engenharias"]}\n'
+                        else:
+                            result = result + f'{nome}: {info["software"]}\n'
 
                         # Atualiza o total de orientandos no banco de dados
                         queryUpdate = "UPDATE orientador_estagio SET total_alunos_ativos = %s WHERE id = %s"
@@ -202,6 +205,6 @@ class SIGAAUpdate:
 
         finally:
             if result_soft != "":
-                return [result, result_abi, result_soft]
-            else:
-                return [result]
+                result = result + result_abi + result_soft
+
+            return [result]
