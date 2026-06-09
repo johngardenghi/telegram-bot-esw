@@ -184,7 +184,7 @@ class SIGAAUpdate:
                     result_abi = "\nENGENHARIAS (ABI)\n"
                     porcentagem = round (total_comissao_engenharias / total_ativos_engenharias, 4) * 100
                     result_abi = result_abi + f"- Total de alunos com estágio ativo: {total_ativos_engenharias}\n"
-                    result_abi = result_abi + f"- Total de alunos sob orientação da comissão: {total_comissao_engenharias} ({porcentagem:.2f}%)"
+                    result_abi = result_abi + f"- Total de alunos sob orientação da comissão: {total_comissao_engenharias} ({porcentagem:.2f}%)\n"
 
             except Error as e:
                 result = f"Erro ao conectar ou consultar o MySQL: {e}"
