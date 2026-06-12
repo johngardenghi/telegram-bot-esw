@@ -16,6 +16,21 @@ import time
 
 class SIGAAUpdate:
 
+    # Lê credenciais
+    def read_credential(name: str, default: str | None = None) -> str:
+        credentials_dir = os.environ.get("CREDENTIALS_DIRECTORY")
+
+        if credentials_dir:
+            path = Path(credentials_dir) / name
+            if path.exists():
+                return path.read_text(encoding="utf-8").strip()
+
+        if default is not None:
+            return default
+
+        raise RuntimeError(f"Credencial não encontrada: {name}")
+
+
     @staticmethod
     def update(driver, wait, orientadores, url, curso):
         # Acessa o vinculo de Coordenador de Estagio
@@ -119,9 +134,9 @@ class SIGAAUpdate:
                 wait.until(EC.presence_of_element_located((By.ID, "username")))
                 print("Fazendo o login")
                 driver.find_element (By.XPATH, '//*[@id="username"]').clear()
-                driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (os.environ.get("ESWBOT_SIGAA_USER"))
+                driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (read_credential("sigaa_user"))
                 driver.find_element (By.XPATH, '//*[@id="password"]').clear()
-                driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (os.environ.get("ESWBOT_SIGAA_PASS"))
+                driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (read_credential("sigaa_pass"))
                 driver.find_element (By.XPATH, '//*[@id="login-form"]/button').click()
 
                 # Verifica se deu o erro de bloqueio da conta

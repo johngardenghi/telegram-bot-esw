@@ -1,0 +1,6 @@
+from .administracao_service import AdministracaoService
+from .config_manager import ConfigManager
+from .credential_manager import CredentialManager
+from .orientadores_service import OrientadorService
+from .sigaa_update import SIGAAUpdate
+from .solicitacao_estagio_service import SolicitacaoEstagioService
