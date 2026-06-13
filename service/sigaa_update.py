@@ -125,7 +125,7 @@ class SIGAAUpdate:
                 driver.find_element (By.XPATH, '//*[@id="username"]').clear()
                 driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (CredentialManager.read_credential("sigaa_user"))
                 driver.find_element (By.XPATH, '//*[@id="password"]').clear()
-                driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (CredentialManager.read_credential("sigaa_pass"))
+                driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (CredentialManager.read_credential("sigaa_password"))
                 driver.find_element (By.XPATH, '//*[@id="login-form"]/button').click()
 
                 # Verifica se deu o erro de bloqueio da conta

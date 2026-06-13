@@ -67,7 +67,7 @@ def main():
     # -----------------------------------------
     DB_HOST = os.environ.get("ESWBOT_DB_HOST")
     DB_USER = os.environ.get("ESWBOT_DB_USER")
-    DB_PASS = CredentialManager.read_credential("db_pass")
+    DB_PASS = CredentialManager.read_credential("db_password")
    
     db_config = {
         'host': DB_HOST,
