@@ -87,6 +87,7 @@ def main():
     app.bot_data["administracao_service"] = AdministracaoService(administrador_estagio_dao)
     app.bot_data["orientador_service"] = OrientadorService(orientador_estagio_dao)
     app.bot_data["solicitacao_estagio_service"] = SolicitacaoEstagioService(solicitacao_estagio_dao)
+    app.bot_data["sigaa_update_service"] = SIGAAUpdate(orientador_estagio_dao)
 
     # Conversas administrativas mais específicas
     app.add_handler(get_atualizar_raio_handler())

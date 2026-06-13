@@ -1,6 +1,10 @@
+import os
+import re
+import time
+
 import mysql.connector
 from mysql.connector import Error
-import os
+
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
@@ -11,28 +15,14 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
-import re
-import time
+
+from service import CredentialManager
 
 class SIGAAUpdate:
+    def __init__(self, orientador_estagio_dao):
+        self.orientador_estagio_dao = orientador_estagio_dao
 
-    # Lê credenciais
-    def read_credential(name: str, default: str | None = None) -> str:
-        credentials_dir = os.environ.get("CREDENTIALS_DIRECTORY")
-
-        if credentials_dir:
-            path = Path(credentials_dir) / name
-            if path.exists():
-                return path.read_text(encoding="utf-8").strip()
-
-        if default is not None:
-            return default
-
-        raise RuntimeError(f"Credencial não encontrada: {name}")
-
-
-    @staticmethod
-    def update(driver, wait, orientadores, url, curso):
+    def update(self, driver, wait, orientadores, url, curso):
         # Acessa o vinculo de Coordenador de Estagio
         print(f"Acessando perfil de Coordenador de Estagio de {curso.capitalize()}")
         driver.get (url)
@@ -108,8 +98,7 @@ class SIGAAUpdate:
 
         return total_ativos, total_comissao
 
-    @staticmethod
-    async def run_update(db_pool):
+    async def run_update(self):
         print("Comecando a rotina de atualizacao")
         result = ""
         result_soft = ""
@@ -134,9 +123,9 @@ class SIGAAUpdate:
                 wait.until(EC.presence_of_element_located((By.ID, "username")))
                 print("Fazendo o login")
                 driver.find_element (By.XPATH, '//*[@id="username"]').clear()
-                driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (read_credential("sigaa_user"))
+                driver.find_element (By.XPATH, '//*[@id="username"]').send_keys (CredentialManager.read_credential("sigaa_user"))
                 driver.find_element (By.XPATH, '//*[@id="password"]').clear()
-                driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (read_credential("sigaa_pass"))
+                driver.find_element (By.XPATH, '//*[@id="password"]').send_keys (CredentialManager.read_credential("sigaa_pass"))
                 driver.find_element (By.XPATH, '//*[@id="login-form"]/button').click()
 
                 # Verifica se deu o erro de bloqueio da conta
@@ -156,62 +145,36 @@ class SIGAAUpdate:
                 pass
 
             # Constroi lista de orientadores
-            try:
-                conn = db_pool.get_connection()
+            orientadores = self.orientador_estagio_dao.lista_orientadores_ativos()
 
-                if conn.is_connected():
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT * FROM orientador_estagio WHERE ativo = 1 ORDER BY nome")
+            # Atualiza alunos de Software
+            link = 'https://sigaa.unb.br/sigaa/escolhaVinculo.do?dispatch=escolher&vinculo=3'
+            total_ativos_software, total_comissao_software = self.update (driver, wait, orientadores, link, 'software')
 
-                    colunas = [desc[0] for desc in cursor.description]
-                    ind_nome = colunas.index('nome')
-                    ind_id = colunas.index('id')
+            # Atualiza alunos das Engenharias
+            link = 'https://sigaa.unb.br/sigaa/escolhaVinculo.do?dispatch=escolher&vinculo=4'
+            total_ativos_engenharias, total_comissao_engenharias = self.update (driver, wait, orientadores, link, 'engenharias')
 
-                    orientadores = {}
-                    for linha in cursor.fetchall():
-                        orientadores[linha[ind_nome]] = {"id": linha[ind_id], "software": 0, "engenharias": 0}
+            for nome, info in orientadores.items():
+                if info["engenharias"] > 0:
+                    result = result + f'{nome}: {info["software"]} + {info["engenharias"]} = {info["software"] + info["engenharias"]}\n'
+                else:
+                    result = result + f'{nome}: {info["software"]}\n'
 
-                    # Atualiza alunos de Software
-                    link = 'https://sigaa.unb.br/sigaa/escolhaVinculo.do?dispatch=escolher&vinculo=3'
-                    total_ativos_software, total_comissao_software = SIGAAUpdate.update (driver, wait, orientadores, link, 'software')
+                # Atualiza o total de orientandos no banco de dados
+                self.orientador_estagio_dao.atualiza_alunos_orientador(info["id"], info["software"] + info["engenharias"])
 
-                    # Atualiza alunos das Engenharias
-                    link = 'https://sigaa.unb.br/sigaa/escolhaVinculo.do?dispatch=escolher&vinculo=4'
-                    total_ativos_engenharias, total_comissao_engenharias = SIGAAUpdate.update (driver, wait, orientadores, link, 'engenharias')
+            result_soft = "\nENGENHARIA DE SOFTWARE\n"
+            porcentagem = round (total_comissao_software / total_ativos_software, 4) * 100
+            result_soft = result_soft + f"- Total de alunos com estágio ativo: {total_ativos_software}\n"
+            result_soft = result_soft + f"- Total de alunos sob orientação da comissão: {total_comissao_software} ({porcentagem:.2f}%)\n"
 
-                    for nome, info in orientadores.items():
-                        if info["engenharias"] > 0:
-                            result = result + f'{nome}: {info["software"]} + {info["engenharias"]} = {info["software"] + info["engenharias"]}\n'
-                        else:
-                            result = result + f'{nome}: {info["software"]}\n'
+            result_abi = "\nENGENHARIAS (ABI)\n"
+            porcentagem = round (total_comissao_engenharias / total_ativos_engenharias, 4) * 100
+            result_abi = result_abi + f"- Total de alunos com estágio ativo: {total_ativos_engenharias}\n"
+            result_abi = result_abi + f"- Total de alunos sob orientação da comissão: {total_comissao_engenharias} ({porcentagem:.2f}%)\n"
 
-                        # Atualiza o total de orientandos no banco de dados
-                        queryUpdate = "UPDATE orientador_estagio SET total_alunos_ativos = %s WHERE id = %s"
-                        valores = (info["software"] + info["engenharias"], info["id"])
-                        cursor.execute(queryUpdate, valores)
-                        conn.commit()
-
-                    result_soft = "\nENGENHARIA DE SOFTWARE\n"
-                    porcentagem = round (total_comissao_software / total_ativos_software, 4) * 100
-                    result_soft = result_soft + f"- Total de alunos com estágio ativo: {total_ativos_software}\n"
-                    result_soft = result_soft + f"- Total de alunos sob orientação da comissão: {total_comissao_software} ({porcentagem:.2f}%)\n"
-
-                    result_abi = "\nENGENHARIAS (ABI)\n"
-                    porcentagem = round (total_comissao_engenharias / total_ativos_engenharias, 4) * 100
-                    result_abi = result_abi + f"- Total de alunos com estágio ativo: {total_ativos_engenharias}\n"
-                    result_abi = result_abi + f"- Total de alunos sob orientação da comissão: {total_comissao_engenharias} ({porcentagem:.2f}%)\n"
-
-            except Error as e:
-                result = f"Erro ao conectar ou consultar o MySQL: {e}"
-                print(result)
-    
-            finally:
-                # Fechamento da conexão e do cursor
-                if conn.is_connected():
-                    cursor.close()
-                    conn.close()
-
-                driver.quit()
+            driver.quit()
 
         except Exception as e:
             result = f"Houve um erro na atualização do SIGAA: {e}"

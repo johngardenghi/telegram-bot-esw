@@ -127,3 +127,33 @@ class OrientadorEstagioDAO:
         query = "SELECT * FROM orientador_estagio WHERE ativo = 0"
         return self.lista_orientadores(query)
 
+    def lista_orientadores_ativos(self):
+        orientadores = {}
+
+        conn = self.db_pool.get_connection()
+        if conn.is_connected():
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM orientador_estagio WHERE ativo = 1 ORDER BY nome")
+
+            colunas = [desc[0] for desc in cursor.description]
+            ind_nome = colunas.index('nome')
+            ind_id = colunas.index('id')
+
+            for linha in cursor.fetchall():
+                orientadores[linha[ind_nome]] = {"id": linha[ind_id], "software": 0, "engenharias": 0}
+
+            cursor.close()
+            conn.close()
+
+        return orientadores
+
+    def atualiza_alunos_orientador(self, id_orientador, total_alunos):
+        conn = self.db_pool.get_connection()
+        if conn.is_connected():
+            cursor = conn.cursor()
+            queryUpdate = "UPDATE orientador_estagio SET total_alunos_ativos = %s WHERE id = %s"
+            valores = (total_alunos, id_orientador)
+            cursor.execute(queryUpdate, valores)
+            conn.commit()
+            cursor.close()
+            conn.close()

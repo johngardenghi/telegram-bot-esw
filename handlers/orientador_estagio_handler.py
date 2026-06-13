@@ -250,7 +250,7 @@ async def encaminhar_instrucoes(update: Update, context: CallbackContext) -> int
     solicitacao_estagio_service.registra_solicitacao(solicitacao_estagio)
 
     # Encaminha o e-mail ao professor orientador, notificando-o da indicação
-    # print(send_email(context.user_data['nome'], context.user_data['email'], context.user_data['telefone'], orientadorEstagio.nome, orientadorEstagio.email, orientadorEstagio.sexo))
+    print(send_email(context.user_data['nome'], context.user_data['email'], context.user_data['telefone'], orientadorEstagio.nome, orientadorEstagio.email, orientadorEstagio.sexo))
     
     return ConversationHandler.END
 
