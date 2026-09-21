@@ -4,6 +4,20 @@ Este bot é destinado para atribuição de orientadores de estágio do curso de 
 
 Os pacotes necessários para seu funcionamento estão em requirements.txt.
 
+## Passos para instalação
+
+1. Instalar o MySQL
+
+2. Instalar o ambiente virtual do Python
+
+```bash
+python3 -m venv /home/john/venv/eswunb_bot/
+```
+
+3. Instalar o drive do Selenium para o Firefox
+
+4. Instalar as credenciais com `systemd` (próxima seção)
+
 ## Gerenciamento seguro de credenciais com `systemd`
 
 O bot utiliza o mecanismo de credenciais do `systemd` para armazenar informações sensíveis, como:
