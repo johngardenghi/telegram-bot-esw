@@ -6,7 +6,19 @@ Os pacotes necessários para seu funcionamento estão em requirements.txt.
 
 ## Passos para instalação
 
-1. Instalar o MySQL
+1. Instalar o MySQL e mudar a senha do root
+
+```bash
+sudo mysql
+```
+
+```sql
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'SUA_SENHA';
+```
+
+```sql
+FLUSH PRIVILEGES;
+```
 
 2. Instalar o ambiente virtual do Python
 
@@ -15,6 +27,8 @@ python3 -m venv /home/john/venv/eswunb_bot/
 ```
 
 3. Instalar o drive do Selenium para o Firefox
+
+
 
 4. Instalar as credenciais com `systemd` (próxima seção)
 
