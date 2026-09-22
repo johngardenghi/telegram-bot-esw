@@ -28,7 +28,17 @@ python3 -m venv /home/john/venv/eswunb_bot/
 
 3. Instalar o drive do Selenium para o Firefox
 
+```bash
+cd /tmp
 
+wget https://github.com/mozilla/geckodriver/releases/download/v0.37.1/geckodriver-v0.37.1-linux64.tar.gz
+
+tar -xzf geckodriver-v0.37.1-linux64.tar.gz
+
+sudo mv geckodriver /usr/local/bin/
+
+sudo chmod +x /usr/local/bin/geckodriver
+```
 
 4. Instalar as credenciais com `systemd` (próxima seção)
 
